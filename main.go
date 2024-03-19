@@ -77,6 +77,7 @@ func parseLabelsValues(ls string) ([]string, []string, error) {
 }
 
 func newJSONCollector(namespace string, labels, values []string) prometheus.Collector {
+	eventlabels := append(labels, "type")
 	c := jsonCollector{
 		namespace: namespace,
 		RegSystems: prometheus.NewDesc(
@@ -97,6 +98,10 @@ func newJSONCollector(namespace string, labels, values []string) prometheus.Coll
 			namespace+"_frames_per_second", "Frames per second server-side", labels, nil),
 		Players: prometheus.NewDesc(
 			namespace+"_player_count", "Current number of players", labels, nil),
+		Updated: prometheus.NewDesc(
+			namespace+"_updated", "Last update", labels, nil),
+		Events: prometheus.NewDesc(
+			namespace+"_events", "Last update", eventlabels, nil),
 		labels: labels,
 		values: values,
 	}
@@ -114,6 +119,8 @@ type jsonCollector struct {
 	RegVics     *prometheus.Desc
 	FPS         *prometheus.Desc
 	Players     *prometheus.Desc
+	Updated     *prometheus.Desc
+	Events      *prometheus.Desc
 	labels      []string
 	values      []string
 }
@@ -146,22 +153,36 @@ func (c *jsonCollector) Collect(ch chan<- prometheus.Metric) {
 		c.FPS, prometheus.GaugeValue, float64(stats.Fps), c.values...)
 	ch <- prometheus.MustNewConstMetric(
 		c.Players, prometheus.GaugeValue, float64(stats.Players), c.values...)
+	ch <- prometheus.MustNewConstMetric(
+		c.Updated, prometheus.CounterValue, float64(stats.Updated), c.values...)
+	satevv := append(c.values, "sat_game_started")
+	ch <- prometheus.MustNewConstMetric(
+		c.Events, prometheus.CounterValue, float64(stats.Events.ServeradmintoolsGameStarted), satevv...)
 }
 
 type satStats struct {
-	RegisteredSystems  int `json:"registered_systems"`
-	RegisteredEntities int `json:"registered_entities"`
-	RegisteredGroups   int `json:"registered_groups"`
-	UptimeSeconds      int `json:"uptime_seconds"`
-	AiCharacters       int `json:"ai_characters"`
-	RegisteredTasks    int `json:"registered_tasks"`
-	RegisteredVehicles int `json:"registered_vehicles"`
-	Fps                int `json:"fps"`
-	Players            int `json:"players"`
+	RegisteredSystems  int    `json:"registered_systems"`
+	RegisteredEntities int    `json:"registered_entities"`
+	RegisteredGroups   int    `json:"registered_groups"`
+	UptimeSeconds      int    `json:"uptime_seconds"`
+	Fps                int    `json:"fps"`
+	RegisteredTasks    int    `json:"registered_tasks"`
+	RegisteredVehicles int    `json:"registered_vehicles"`
+	AiCharacters       int    `json:"ai_characters"`
+	Players            int    `json:"players"`
+	Updated            int    `json:"updated"`
+	Events             Events `json:"events"`
+}
+type Events struct {
+	ServeradmintoolsGameStarted int `json:"serveradmintools_game_started"`
 }
 
 func (s satStats) String() string {
-	return fmt.Sprintf("RegisteredSystems: %d\nRegisteredEntities: %d\nRegisteredGroups: %d\nUptimeSeconds: %d\nAiCharacters: %d\nRegisteredTasks: %d\nRegisteredVehicles: %d\nFps: %d\nPlayers: %d", s.RegisteredSystems, s.RegisteredEntities, s.RegisteredGroups, s.UptimeSeconds, s.AiCharacters, s.RegisteredTasks, s.RegisteredVehicles, s.Fps, s.Players)
+	return fmt.Sprintf("RegisteredSystems: %d\nRegisteredEntities: %d\nRegisteredGroups: %d\nUptimeSeconds: %d\nAiCharacters: %d\nRegisteredTasks: %d\nRegisteredVehicles: %d\nFps: %d\nPlayers: %d\nUpdated: %d\nEvents: %s\n", s.RegisteredSystems, s.RegisteredEntities, s.RegisteredGroups, s.UptimeSeconds, s.AiCharacters, s.RegisteredTasks, s.RegisteredVehicles, s.Fps, s.Players, s.Updated, s.Events)
+}
+
+func (e Events) String() string {
+	return fmt.Sprintf("Events:\n    ServeradmintoolsGameStarted: %d\n", e.ServeradmintoolsGameStarted)
 }
 
 func readStats(fn string) (*satStats, error) {
