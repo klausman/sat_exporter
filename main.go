@@ -77,7 +77,8 @@ func parseLabelsValues(ls string) ([]string, []string, error) {
 }
 
 func newJSONCollector(namespace string, labels, values []string) prometheus.Collector {
-	eventlabels := append(labels, "type")
+	eventlabels := labels
+	eventlabels = append(eventlabels, "type")
 	c := jsonCollector{
 		namespace: namespace,
 		RegSystems: prometheus.NewDesc(
@@ -155,30 +156,64 @@ func (c *jsonCollector) Collect(ch chan<- prometheus.Metric) {
 		c.Players, prometheus.GaugeValue, float64(stats.Players), c.values...)
 	ch <- prometheus.MustNewConstMetric(
 		c.Updated, prometheus.CounterValue, float64(stats.Updated), c.values...)
-	satevv := append(c.values, "sat_game_started")
-	ch <- prometheus.MustNewConstMetric(
-		c.Events, prometheus.CounterValue, float64(stats.Events.ServeradmintoolsGameStarted), satevv...)
+	for en, val := range stats.Events {
+		lv := c.values
+		lv = append(lv, en)
+		ch <- prometheus.MustNewConstMetric(
+			c.Events, prometheus.CounterValue, val, lv...)
+	}
+}
+
+type satStatsRaw struct {
+	RegisteredSystems  int                    `json:"registered_systems"`
+	RegisteredEntities int                    `json:"registered_entities"`
+	RegisteredGroups   int                    `json:"registered_groups"`
+	UptimeSeconds      int                    `json:"uptime_seconds"`
+	Fps                int                    `json:"fps"`
+	RegisteredTasks    int                    `json:"registered_tasks"`
+	RegisteredVehicles int                    `json:"registered_vehicles"`
+	AiCharacters       int                    `json:"ai_characters"`
+	Players            int                    `json:"players"`
+	Updated            int                    `json:"updated"`
+	Events             map[string]interface{} `mapstructure:",remain"`
+}
+
+func (r satStatsRaw) cook() satStats {
+	return satStats{
+		RegisteredSystems:  r.RegisteredSystems,
+		RegisteredEntities: r.RegisteredEntities,
+		RegisteredGroups:   r.RegisteredGroups,
+		UptimeSeconds:      r.UptimeSeconds,
+		Fps:                r.Fps,
+		RegisteredTasks:    r.RegisteredTasks,
+		RegisteredVehicles: r.RegisteredVehicles,
+		AiCharacters:       r.AiCharacters,
+		Players:            r.Players,
+		Updated:            r.Updated,
+		Events:             make(map[string]float64),
+	}
 }
 
 type satStats struct {
-	RegisteredSystems  int    `json:"registered_systems"`
-	RegisteredEntities int    `json:"registered_entities"`
-	RegisteredGroups   int    `json:"registered_groups"`
-	UptimeSeconds      int    `json:"uptime_seconds"`
-	Fps                int    `json:"fps"`
-	RegisteredTasks    int    `json:"registered_tasks"`
-	RegisteredVehicles int    `json:"registered_vehicles"`
-	AiCharacters       int    `json:"ai_characters"`
-	Players            int    `json:"players"`
-	Updated            int    `json:"updated"`
-	Events             Events `json:"events"`
+	RegisteredSystems  int
+	RegisteredEntities int
+	RegisteredGroups   int
+	UptimeSeconds      int
+	Fps                int
+	RegisteredTasks    int
+	RegisteredVehicles int
+	AiCharacters       int
+	Players            int
+	Updated            int
+	Events             map[string]float64
 }
+
 type Events struct {
 	ServeradmintoolsGameStarted int `json:"serveradmintools_game_started"`
 }
 
 func (s satStats) String() string {
-	return fmt.Sprintf("RegisteredSystems: %d\nRegisteredEntities: %d\nRegisteredGroups: %d\nUptimeSeconds: %d\nAiCharacters: %d\nRegisteredTasks: %d\nRegisteredVehicles: %d\nFps: %d\nPlayers: %d\nUpdated: %d\nEvents: %s\n", s.RegisteredSystems, s.RegisteredEntities, s.RegisteredGroups, s.UptimeSeconds, s.AiCharacters, s.RegisteredTasks, s.RegisteredVehicles, s.Fps, s.Players, s.Updated, s.Events)
+	return fmt.Sprintf("RegisteredSystems: %d\nRegisteredEntities: %d\nRegisteredGroups: %d\nUptimeSeconds: %d\nAiCharacters: %d\nRegisteredTasks: %d\nRegisteredVehicles: %d\nFps: %d\nPlayers: %d\nUpdated: %d\nEvents: %#v\n", s.RegisteredSystems, s.RegisteredEntities, s.RegisteredGroups, s.UptimeSeconds, s.AiCharacters, s.RegisteredTasks, s.RegisteredVehicles, s.Fps, s.Players, s.Updated, s.Events)
 }
 
 func (e Events) String() string {
@@ -186,14 +221,22 @@ func (e Events) String() string {
 }
 
 func readStats(fn string) (*satStats, error) {
-	s := &satStats{}
+	sr := &satStatsRaw{}
 	data, err := os.ReadFile(fn)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
-	err = json.Unmarshal(data, s)
+	err = json.Unmarshal(data, sr)
 	if err != nil {
-		return s, err
+		return nil, err
 	}
-	return s, nil
+	s := sr.cook()
+	for name, stat := range sr.Events {
+		st, ok := stat.(float64)
+		if !ok {
+			return nil, fmt.Errorf("stat is not an []interface{}: %T %#v", stat, stat)
+		}
+		s.Events[strings.TrimPrefix(name, "serveradmintools_")] = st
+	}
+	return &s, nil
 }
