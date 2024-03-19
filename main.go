@@ -234,7 +234,7 @@ func readStats(fn string) (*satStats, error) {
 	for name, stat := range sr.Events {
 		st, ok := stat.(float64)
 		if !ok {
-			return nil, fmt.Errorf("stat is not an []interface{}: %T %#v", stat, stat)
+			return nil, fmt.Errorf("%s stat is not a float64: %T %#v", name, stat, stat)
 		}
 		s.Events[strings.TrimPrefix(name, "serveradmintools_")] = st
 	}
