@@ -316,7 +316,7 @@
             "uid": "000000001"
           },
           "editorMode": "code",
-          "expr": "rate(reforger_sat_exporter_events{server=~\"$server\"}[5m])",
+          "expr": "rate(reforger_sat_exporter_events_total{server=~\"$server\"}[5m])",
           "instant": false,
           "legendFormat": "{{type}}",
           "range": true,

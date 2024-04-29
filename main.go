@@ -102,7 +102,7 @@ func newJSONCollector(namespace string, labels, values []string) prometheus.Coll
 		Updated: prometheus.NewDesc(
 			namespace+"_updated", "Last update", labels, nil),
 		Events: prometheus.NewDesc(
-			namespace+"_events", "Last update", eventlabels, nil),
+			namespace+"_events_total", "Last update", eventlabels, nil),
 		labels: labels,
 		values: values,
 	}
