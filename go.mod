@@ -1,4 +1,4 @@
-module github.com/klausman/sat_exporter
+module pkg.i-no.de/pkg/sat_exporter
 
 go 1.19
 
