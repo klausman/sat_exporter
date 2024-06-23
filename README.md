@@ -1,5 +1,9 @@
 # Reforger Server Admin Tools Exporter
 
+**NOTE**: As of 2024-06-23 the Go import url of this repo has changed to:
+`pkg.i-no.de/pkg/sat_exporter`. Issues, merge requests etc should be filed at its new
+source location, https://codeberg.org/klausman/sat_exporter
+
 This program will read the stats file written by [Server Admin
 Tools](https://reforger.armaplatform.com/workshop/5AAAC70D754245DD-ServerAdminTools)
 and export the statistics in a Prometheus-compatible metrics format.
