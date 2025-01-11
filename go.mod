@@ -1,6 +1,6 @@
 module pkg.i-no.de/pkg/sat_exporter
 
-go 1.19
+go 1.22
 
 require github.com/prometheus/client_golang v1.16.0
 

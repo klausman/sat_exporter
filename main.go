@@ -14,6 +14,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const version = "v0.1.0"
+
 var (
 	statFile = flag.String("f", "/home/reforger/profile/profile/ServerAdminTools_Stats.json",
 		"file to read stats from")
@@ -25,10 +27,15 @@ var (
 	timeout = flag.Duration("timeout", time.Second*3,
 		"Timeout for webserver reading client request")
 	once = flag.Bool("once", false, "Only output the stats to stdout and exit (for testing)")
+	vers = flag.Bool("version", false, "Print version number and exit")
 )
 
 func main() {
 	flag.Parse()
+	if *vers {
+		fmt.Fprintf(os.Stderr, "sat_exporter %s", version)
+		os.Exit(0)
+	}
 	var labels, values []string
 	var err error
 	if *lvs != "" {
